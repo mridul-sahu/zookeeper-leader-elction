@@ -152,8 +152,8 @@ spec:
         app: election
     spec:
       containers:
-      - name: election-container
-        image: zookeeper-election
+      - name: leader-election-container
+        image: mridulsahu/leader-election
         env:
         - name: DB_URI
           value: "db-service:27017"

@@ -15,7 +15,7 @@ import (
 
 const (
 	TIMEOUT        = 10
-	DB             = "test"
+	DB             = "topics"
 	COLLECTION     = "messages"
 	ELECTION_TOPIC = "/topic"
 )
