@@ -82,7 +82,7 @@ func writeToDB(message string) error {
 	err = collection.Find(bson.M{"topic": em.Topic}).One(&em)
 
 	if err != nil {
-		log.Printf("topic not found")
+		log.Printf("topic find failed")
 	}
 
 	em.Messages = append(em.Messages, message)
