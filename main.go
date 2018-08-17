@@ -10,6 +10,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"encoding/json"
 	"time"
+	"fmt"
 )
 
 const (
@@ -167,16 +168,63 @@ func (s *server) monitorLeadership() {
 
 			if status.Role == leaderelection.Leader {
 				// Subscribe to channel
-				s.redisPubSubConn.Subscribe(ELECTION_TOPIC)
+				err := s.redisPubSubConn.Subscribe(ELECTION_TOPIC)
+
+				if err != nil {
+					log.Printf("Cound not subscribe to %s: %v", ELECTION_TOPIC, err)
+				}
+
 			} else {
 				// Unsubscribe to channel
-				s.redisPubSubConn.Unsubscribe(ELECTION_TOPIC)
+				err := s.redisPubSubConn.Unsubscribe(ELECTION_TOPIC)
+
+				if err != nil {
+					log.Printf("Cound not unsubsbribe from %s: %v", ELECTION_TOPIC, err)
+				}
 			}
 
 		case <-s.pubSubClosed:
 			log.Printf("Redis Pub Sub connection was closed")
 			s.candidate.Resign()
 			return
+		}
+	}
+}
+
+/*
+ * Publish Messages publishes a message every 3 seconds to 'ELECTION_TOPIC' redis channel
+ */
+func publishMessages() {
+
+	redisConn, err := redis.Dial("tcp", os.Getenv("REDIS_URI"))
+
+	if err != nil {
+		log.Fatalf("Error in redis.Dial : %v", err)
+	}
+
+	defer redisConn.Close()
+
+	var count int
+
+	for {
+		time.Sleep(time.Second * 3)
+		log.Printf("Publishing message to %s", ELECTION_TOPIC)
+
+		message := fmt.Sprintf("This is message %v to '%s'", count, ELECTION_TOPIC)
+
+		data, err := json.Marshal(message)
+
+		if err != nil {
+			log.Printf("Cannot Marshal Event: %v", err)
+			return
+
+		} else {
+			_, err = redisConn.Do("PUBLISH", ELECTION_TOPIC, data)
+
+			if err != nil {
+				log.Printf("Could not publish event")
+			}
+			count++
 		}
 	}
 }
@@ -223,6 +271,8 @@ func main() {
 	}
 
 	go s.processRedisPubSub()
+
+	go publishMessages()
 
 	s.monitorLeadership()
 
